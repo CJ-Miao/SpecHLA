@@ -37,14 +37,13 @@ def change_allele_name(raw, new):
                 outfile.write(line)
 
 def minimap(sample, hap_index):
-    command = f"{minimap_path} {record_truth_file_dict[sample][hap_index]} {HLA_data}  -o {result_path}/{sample}.h{hap_index+1}.sam -a -t {args['j']}"
-    print (command)
+    # 数据库序列比对到输入的 assembly (query: database, target: assembly)
+    command = f"{minimap_path} {HLA_data} {record_truth_file_dict[sample][hap_index]} -o {result_path}/{sample}.h{hap_index+1}.sam -a -t {args['j']}"
     os.system(command)
 
 def minimap_exon(sample, hap_index):
-    # command = f"{minimap_path} {record_truth_file_dict[sample][hap_index]} {HLA_data}  -o {result_path}/{sample}.h{hap_index+1}.paf -t 10"
-    command = f"{minimap_path} {record_truth_file_dict[sample][hap_index]} {single_exon_database_fasta}  -o {result_path}/{sample}.h{hap_index+1}.exon.sam -a -t {args['j']}"
-    # print (command)
+    # 数据库序列比对到输入的 assembly (query: database, target: assembly)
+    command = f"{minimap_path} {single_exon_database_fasta} {record_truth_file_dict[sample][hap_index]} -o {result_path}/{sample}.h{hap_index+1}.exon.sam -a -t {args['j']}"
     os.system(command)
 
 def ana_paf(input_paf, gene, sample):
@@ -86,22 +85,26 @@ def ana_paf(input_paf, gene, sample):
         print ("identity **************************")
 
 def ana_sam(input_sam, gene, sample):
-    # Open the PAF file
+    # Open the SAM file
     align_list = []
-    # # Open the SAM file
     f = open(input_sam, "r")
     for line in f:
         # Skip header lines
         if line.startswith("@"):
             continue
-        if not line.startswith(f"{gene}*"):
+        fields = line.split("\t")
+        # 参考序列名在第 3 列 (RNAME), 格式为 A*01:01:01:01
+        ref_name = fields[2]
+        if ref_name == "*" or not ref_name.startswith(f"{gene}*"):
             continue
-        
-        allele_name = line.split("\t")[0]
-        exon_allele_name = "HLA-" + allele_name
-        
+
         align_info = read_sam_line(line)
         align_list.append(align_info)
+
+    # 如果没有比对结果，返回空列表
+    if len(align_list) == 0:
+        print(f"Warning: No alignments found for gene {gene}")
+
     identity_sorted_list = sorted(align_list, key=get_3_element, reverse = True)
     return identity_sorted_list
 
@@ -221,19 +224,23 @@ def read_sam_line(line):
     return [allele_name, match_length, block_length, match_identity, Target_sequence_name, target_start, target_end]
 
 def extract_seq(select_allele_list, assembly_file, hap_index, sample, gene, out_fasta, in_fasta):
+    if len(select_allele_list) == 0:
+        return
 
-    # define the segment name, start position, and end position
-    segment_name = select_allele_list[4]
-    start_pos = int(select_allele_list[5]) - 1
-    end_pos = int(select_allele_list[6]) - 1
+    # select_allele_list 格式：[assembly_seq_name, match_length, block_length, identity, ref_allele_name, start, end]
+    assembly_seq_name = select_allele_list[0]
+    ref_allele_name = select_allele_list[4]
 
-    # extract the sequence for the interval
-    sequence = in_fasta.fetch(segment_name, start_pos, end_pos)
+    # 对于完整的 HLA 基因 assembly，直接输出整个序列
+    # 因为输入的就是完整的 HLA 基因序列，不需要截取
+    try:
+        sequence = in_fasta.fetch(assembly_seq_name)
+    except KeyError:
+        print(f"Warning: Could not fetch sequence {assembly_seq_name} from {assembly_file}")
+        return
 
-    # write the segment name and sequence to the output file
-    out_fasta.write(f'>{sample}.h{hap_index+1}.HLA-{gene}\t{segment_name}:{start_pos}-{end_pos}\t{select_allele_list[0]}\t{version_info}\n{sequence}\n')
-
-    # close the input and output files
+    # 输出格式：sample.hap.HLA-gene  typed_allele  version
+    out_fasta.write(f'>{sample}.h{hap_index+1}.HLA-{gene}\t{ref_allele_name}\t{version_info}\n{sequence}\n')
     
 def check_trio_consistency(record_best_match, trio_list):
     for gene in gene_list:
@@ -280,7 +287,6 @@ class Assign_allele():
             truth_alleles = [[]]
             first_hap_selection, second_hap_selection = self.handle_each_gene(gene_alignments, truth_alleles, gene)
             record_selection[gene] = [first_hap_selection, second_hap_selection]
-            print (self.sample, gene, "selection", first_hap_selection[0], second_hap_selection[0])
         return record_selection
     
     def handle_each_gene(self, gene_alignments, truth_alleles, gene):
@@ -311,6 +317,9 @@ class Assign_allele():
             return first_hap_selection, second_hap_selection
 
     def select_by_alignment(self, align_list, truth_alleles):
+        # 如果没有比对结果，返回空列表
+        if len(align_list) == 0:
+            return []
 
         match_sorted_list = sorted(align_list, key=get_1_element, reverse = True)
         match_sorted_list = resort_list_with_same_alleles(match_sorted_list, 1, 3)
@@ -319,14 +328,11 @@ class Assign_allele():
         max_match_len_alleles = get_max_alleles(match_sorted_list, 1)
         max_identity_alleles = get_max_alleles(identity_sorted_list, 3)
 
-        # print (identity_sorted_list)
-        intersection_alleles = list(set(max_match_len_alleles) & set(max_identity_alleles))   
-        print (">>>>>>>>>", match_sorted_list[:10])
+        intersection_alleles = list(set(max_match_len_alleles) & set(max_identity_alleles))
 
         if len(intersection_alleles) > 0:
             select_allele_list = intersection_alleles[0].split(">")
             select_allele = select_allele_list[0]
-            print (">>>>>>>>>>perfect:", select_allele)      
             return select_allele_list
 
         max_match_len = match_sorted_list[0][1]
@@ -409,8 +415,7 @@ if __name__ == "__main__":
     required.add_argument("-n", type=str, help="Sample ID", metavar="\b")
     required.add_argument("-o", type=str, help="The output folder to store the typing results.", metavar="\b", default="./output")
     optional.add_argument("-j", type=int, help="Number of threads.", metavar="\b", default=10)
-    # optional.add_argument("-g", type=int, help="Whether use G group resolution annotation [0|1].", metavar="\b", default=0)
-    # optional.add_argument("-u", type=str, help="Choose full-length or exon typing. 0 indicates full-length, 1 means exon.", metavar="\b", default="0")
+    optional.add_argument("--gene", type=str, help="Specify which gene(s) to type, e.g., 'A' or 'A,B,C'. Default: type all 8 genes.", metavar="\b", default=None)
     optional.add_argument("-h", "--help", action="help")
     args = vars(parser.parse_args()) 
 
@@ -444,47 +449,63 @@ if __name__ == "__main__":
     result_path = args['o']
     sample = args['n']
     samples_list = [sample]
-    gene_list = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
-    record_truth_file_dict = {sample : [args['1'], args['2']]}
 
-    # create an output file for the extracted segment
-    out_fasta = open(result_path + f"/{sample}_extracted_HLA_alleles.fasta", 'w')
+    # 根据 --gene 参数确定要分析的基因列表
+    all_genes = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
+    if args.get('gene'):
+        gene_list = [g.strip() for g in args['gene'].split(',')]
+        # 验证基因名称是否有效
+        for g in gene_list:
+            if g not in all_genes:
+                print(f"Warning: {g} is not a valid HLA gene name. Skipping.")
+        gene_list = [g for g in gene_list if g in all_genes]
+        if len(gene_list) == 0:
+            print("Error: No valid genes specified. Using all 8 genes.")
+            gene_list = all_genes
+        print(f"Analyzing genes: {', '.join(gene_list)}")
+    else:
+        gene_list = all_genes
+        print("Analyzing all 8 classical HLA genes")
+
+    record_truth_file_dict = {sample : [args['1'], args['2']]}
 
     record_best_match = {}
     for sample in samples_list:
-        print (sample)
         sample_save_alignments_dict = {}
         for hap_index in range(2):
             minimap(sample, hap_index)
             # minimap_exon(sample, hap_index)
         for hap_index in range(2):
-            # input_sam_exon = f"/mnt/d/HLAPro_backup/minor_rev/extract_alleles/{sample}.h{hap_index+1}.exon.sam"
-            
-            # input_paf = f"/mnt/d/HLAPro_backup/minor_rev/extract_alleles/{sample}.h{hap_index+1}.paf"
             input_sam = f"{result_path}/{sample}.h{hap_index+1}.sam"
             assembly_file = record_truth_file_dict[sample][hap_index]
-            # open the input FASTA file
-            
+
             for gene in gene_list:
                 if gene not in sample_save_alignments_dict:
                     sample_save_alignments_dict[gene] = []
                 align_list = ana_sam(input_sam, gene, sample)
                 sample_save_alignments_dict[gene].append(align_list)
-                # print (assembly_file, input_sam)
         ass = Assign_allele(sample_save_alignments_dict, sample)
         record_selection = ass.main()
         record_best_match[sample] = record_selection
-        for hap_index in range(2):
-            assembly_file = record_truth_file_dict[sample][hap_index]
-            in_fasta = pysam.FastaFile(assembly_file)
-            for gene in gene_list: 
-                select_allele_list = record_selection[gene][hap_index]
-            
-                extract_seq(select_allele_list, assembly_file, hap_index, sample, gene, out_fasta, in_fasta)
-    #     #         break
-            in_fasta.close()
-    #     # break
-    out_fasta.close()
-    # check_trio_consistency(record_best_match, trio_list)
-    # """
+
+    # 输出 typing 结果到文本文件
+    result_file = result_path + "/hla.typing.results.txt"
+    f = open(result_file, 'w')
+    print("Locus\tChromosome\tAllele\tIdentity", file=f)
+    for sample in samples_list:
+        for gene in gene_list:
+            # record_best_match[sample][gene] = [hap1_result, hap2_result]
+            hap1_result = record_best_match[sample][gene][0]
+            hap2_result = record_best_match[sample][gene][1]
+
+            # 提取等位基因名（第 5 个元素，index=4）和一致性（第 4 个元素，index=3）
+            allele1 = hap1_result[4] if len(hap1_result) > 4 else "N/A"
+            allele2 = hap2_result[4] if len(hap2_result) > 4 else "N/A"
+            identity1 = f"{float(hap1_result[3]):.4f}" if len(hap1_result) > 3 and hap1_result[3] != "N/A" else "N/A"
+            identity2 = f"{float(hap2_result[3]):.4f}" if len(hap2_result) > 3 and hap2_result[3] != "N/A" else "N/A"
+
+            print(f"{gene}\t1\t{allele1}\t{identity1}", file=f)
+            print(f"{gene}\t2\t{allele2}\t{identity2}", file=f)
+    f.close()
+    print(f"Typing results saved to {result_file}")
 

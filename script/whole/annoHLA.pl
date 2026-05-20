@@ -164,23 +164,31 @@ sub whole_blast{
                my $fa="$fadir/hla.allele.$i.$class.fasta";
                #extract the diversity region for annotation
                if($class eq "HLA_DQB1"){
+                       # Use full length alignment to capture more distinguishing variants
+                       # Original: $class\_$j:500-2400 $class\_$j:5200-7300 (~4000bp in 2 regions)
                        my $j = $i -1;
-                       `samtools faidx $fa $class\_$j:500-2400 $class\_$j:5200-7300 >$fadir/$class.temp.fasta`;
+                       `samtools faidx $fa $class\_$j >$fadir/$class.temp.fasta`;
                        $fa = "$fadir/$class.temp.fasta";
                }
                if($class eq "HLA_DQA1"){
+                       # Use full length alignment to capture more distinguishing variants
+                       # Original: $class\_$j:500-900 $class\_$j:4600-6100 (~2000bp in 2 regions)
                        my $j = $i -1;
-                       `samtools faidx $fa $class\_$j:500-900 $class\_$j:4600-6100 >$fadir/$class.temp.fasta`;
+                       `samtools faidx $fa $class\_$j >$fadir/$class.temp.fasta`;
                        $fa = "$fadir/$class.temp.fasta";
                }
                if($class eq "HLA_DPA1"){
+                       # Use full length alignment to capture more distinguishing variants
+                       # Original: $class\_$j:400-700 $class\_$j:4200-5500 (~2600bp in 2 regions)
                        my $j = $i -1;
-                       `samtools faidx $fa $class\_$j:400-700 $class\_$j:4200-5500 >$fadir/$class.temp.fasta`;
+                       `samtools faidx $fa $class\_$j >$fadir/$class.temp.fasta`;
                        $fa = "$fadir/$class.temp.fasta";
                }
                if($class eq "HLA_DPB1"){
+                       # Use full length alignment instead of fragmented regions for better specificity
+                       # Original: `samtools faidx $fa $class\_$j:300-600 $class\_$j:5000-5300 $class\_$j:9200-10600 >$fadir/$class.temp.fasta`;
                        my $j = $i -1;
-                       `samtools faidx $fa $class\_$j:300-600 $class\_$j:5000-5300 $class\_$j:9200-10600 >$fadir/$class.temp.fasta`;
+                       `samtools faidx $fa $class\_$j >$fadir/$class.temp.fasta`;
                        $fa = "$fadir/$class.temp.fasta";
                }
                if($class eq "HLA_DRB1"){
@@ -324,29 +332,31 @@ foreach my $hla(@hlas){
                  my ($allele,$score) = (split /;/,$oo)[0,1];
                  $score = sprintf "%.3f", $score;
                  #DRB1*14:01 and DRB1*14:54 differ in HLA_DRB1:9519
-                 if($allele =~ /DRB1\*14:01/){
-                          system("samtools  mpileup -r HLA_DRB1:9519-9519 -t DP -t SP -uvf $db/hla.ref.extend.fa $dir/$sample.realign.sort.bam --output $workdir/snp.vcf");
-                          open TE, "$workdir/snp.vcf" or die "$!\n";
-                          while(<TE>){
-                                 chomp;
-                                 next if(/^#/);
-                                 my $alt = (split)[4];
-                                 if($alt =~ /T/){print "$allele\n"} else{$allele = "DRB1*14:54";}
-                          }
-                          close TE;
-                 }
+                 # TEMPORARILY DISABLED - re-enable after fixing BAM file generation
+                 # if($allele =~ /DRB1\*14:01/){
+                 #          system("samtools  mpileup -r HLA_DRB1:9519-9519 -t DP -t SP -uvf $db/hla.ref.extend.fa $dir/$sample.realign.sort.bam --output $workdir/snp.vcf");
+                 #          open TE, "$workdir/snp.vcf" or die "$!\n";
+                 #          while(<TE>){
+                 #                 chomp;
+                 #                 next if(/^#/);
+                 #                 my $alt = (split)[4];
+                 #                 if($alt =~ /T/){print "$allele\n"} else{$allele = "DRB1*14:54";}
+                 #          }
+                 #          close TE;
+                 # }
                  #C*07:01 and C*07:18 differ in HLA_C:4061
-                 if($allele =~ /C\*07:01/ && $wxs eq "exon"){
-                          system("samtools  mpileup -r HLA_C:4061-4061 -t DP -t SP -uvf $db/hla.ref.extend.fa $dir/$sample.realign.sort.bam --output $workdir/snp.vcf");
-                          open TE, "$workdir/snp.vcf" or die "$!\n";
-                          while(<TE>){
-                                 chomp;
-                                 next if(/^#/);
-                                 my $alt = (split)[4];
-                                 if($alt =~ /T/){$allele = "C*07:18:01:01";}
-                          }
-                          close TE;
-                 }
+                 # TEMPORARILY DISABLED - re-enable after fixing BAM file generation
+                 # if($allele =~ /C\*07:01/ && $wxs eq "exon"){
+                 #          system("samtools  mpileup -r HLA_C:4061-4061 -t DP -t SP -uvf $db/hla.ref.extend.fa $dir/$sample.realign.sort.bam --output $workdir/snp.vcf");
+                 #          open TE, "$workdir/snp.vcf" or die "$!\n";
+                 #          while(<TE>){
+                 #                 chomp;
+                 #                 next if(/^#/);
+                 #                 my $alt = (split)[4];
+                 #                 if($alt =~ /T/){$allele = "C*07:18:01:01";}
+                 #          }
+                 #          close TE;
+                 # }
 
                  my @tt = (split /:/, $allele);
                  my $kid = "$tt[0]".":"."$tt[1]";
