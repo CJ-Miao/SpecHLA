@@ -6,7 +6,7 @@
   "description": "../db/HLA/whole/HLA_B.fasta",
   "number-of-letters": 23009232,
   "number-of-sequences": 7176,
-  "last-updated": "2026-05-20T09:41:00",
+  "last-updated": "2026-05-20T14:22:00",
   "number-of-volumes": 1,
   "bytes-total": 6696677,
   "bytes-to-cache": 5843221,

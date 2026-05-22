@@ -6,7 +6,7 @@
   "description": "../db/HLA/exon/HLA_DPA1.fasta",
   "number-of-letters": 683210,
   "number-of-sequences": 929,
-  "last-updated": "2026-05-20T09:41:00",
+  "last-updated": "2026-05-20T14:22:00",
   "number-of-volumes": 1,
   "bytes-total": 360232,
   "bytes-to-cache": 182335,

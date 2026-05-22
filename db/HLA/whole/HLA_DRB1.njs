@@ -6,7 +6,7 @@
   "description": "../db/HLA/whole/HLA_DRB1.fasta",
   "number-of-letters": 8729620,
   "number-of-sequences": 662,
-  "last-updated": "2026-05-20T09:41:00",
+  "last-updated": "2026-05-20T14:22:00",
   "number-of-volumes": 1,
   "bytes-total": 2325006,
   "bytes-to-cache": 2190886,

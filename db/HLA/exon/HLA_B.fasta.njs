@@ -6,7 +6,7 @@
   "description": "../db/HLA/exon/HLA_B.fasta",
   "number-of-letters": 10463057,
   "number-of-sequences": 11110,
-  "last-updated": "2026-05-20T09:41:00",
+  "last-updated": "2026-05-20T14:22:00",
   "number-of-volumes": 1,
   "bytes-total": 4310987,
   "bytes-to-cache": 2756721,

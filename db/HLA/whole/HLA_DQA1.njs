@@ -6,7 +6,7 @@
   "description": "../db/HLA/whole/HLA_DQA1.fasta",
   "number-of-letters": 3785148,
   "number-of-sequences": 646,
-  "last-updated": "2026-05-20T09:41:00",
+  "last-updated": "2026-05-20T14:22:00",
   "number-of-volumes": 1,
   "bytes-total": 1085826,
   "bytes-to-cache": 954546,

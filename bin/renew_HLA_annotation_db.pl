@@ -61,7 +61,20 @@ foreach my $hla(@hlas){
         `makeblastdb -in $db_dir/HLA/exon/HLA_$hla.fasta -dbtype nucl -parse_seqids -out $db_dir/HLA/exon/HLA_$hla.fasta`;
 
 }
-`cp $db_dir/HLA/exon/HLA_DRB1.fasta $db_dir/HLA/whole/HLA_DRB1.exon.fasta`;
+# Fix HLA_DRB1.exon header: extract allele name from IMGT format ">HLA:HLAxxxx DRB1*xx:xx:xx:xx ... bp"
+open EXIN, "$db_dir/HLA/exon/HLA_DRB1.fasta" or die "$!\n";
+open EXOUT, ">$db_dir/HLA/whole/HLA_DRB1.exon.fasta" or die "$!\n";
+while(<EXIN>){
+        chomp;
+        if(/^>/){
+                my $allele = (split /\s+/,$_,3)[1];
+                print EXOUT ">$allele\n";
+        } else {
+                print EXOUT "$_\n";
+        }
+}
+close EXIN;
+close EXOUT;
 `samtools faidx $db_dir/HLA/whole/HLA_DRB1.exon.fasta`;
 `makeblastdb -in $db_dir/HLA/whole/HLA_DRB1.exon.fasta -dbtype nucl -parse_seqids -out $db_dir/HLA/whole/HLA_DRB1.exon`;
 

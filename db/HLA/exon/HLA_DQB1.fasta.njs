@@ -6,7 +6,7 @@
   "description": "../db/HLA/exon/HLA_DQB1.fasta",
   "number-of-letters": 1929547,
   "number-of-sequences": 3069,
-  "last-updated": "2026-05-20T09:41:00",
+  "last-updated": "2026-05-20T14:22:00",
   "number-of-volumes": 1,
   "bytes-total": 993368,
   "bytes-to-cache": 521050,
