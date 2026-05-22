@@ -480,6 +480,28 @@ perl renew_HLA_annotation_db.pl
 This script will download the latest IMGT/HLA database from Github, and
 preprocess it for SpecHLA to use.
 
+## HLA allele frequency database
+
+SpecHLA uses `db/HLA_FREQ_HLA_I_II.txt` for population-based allele frequency
+annotation (controlled by the `-p` parameter in `annoHLA.pl`).
+
+The frequency data is derived from [allelefrequencies.net](http://www.allelefrequencies.net)
+and stored as a git submodule at `data/allelefrequencies/`.
+
+To update the frequency database with the latest data from allelefrequencies.net:
+
+```bash
+# Pull latest data from the submodule
+git submodule update --remote data/allelefrequencies
+
+# Regenerate the frequency file
+python3 script/convert_hla_freq.py
+```
+
+The conversion script classifies each population into Caucasian, Black, or Asian
+using keyword-based matching, then computes a weighted average frequency per
+allele per population group.
+
 ## Dependencies
 
 ### Systematic requirement

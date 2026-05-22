@@ -1,0 +1,3 @@
+[submodule "data/allelefrequencies"]
+	path = data/allelefrequencies
+	url = git@github.com:slowkow/allelefrequencies.git
